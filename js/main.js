@@ -35,6 +35,17 @@ const I18N = {
   }
 };
 
+function animateHeroTitle() {
+  const heroTitle = document.querySelector('.hero-title');
+  if (heroTitle) {
+    const text = heroTitle.textContent.trim();
+    const words = text.split(/\s+/);
+    heroTitle.innerHTML = words.map((word, index) => 
+      `<span class="word">${word}</span>`
+    ).join(' ');
+  }
+}
+
 function applyI18n(lang){
   // Fallback: if Arabic is requested, use English instead
   if(lang === 'ar') lang = 'en';
@@ -56,6 +67,8 @@ function applyI18n(lang){
   });
   const fb = document.querySelector('.footer-bottom p');
   if(fb && dict.footer?.copyright){ fb.textContent = dict.footer.copyright; }
+  // Re-animate hero title after language change
+  setTimeout(animateHeroTitle, 100);
 }
 
 function initLangSwitcher(){
@@ -242,23 +255,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Add typing effect to hero title
-    const heroTitle = document.querySelector('.hero-title');
-    if (heroTitle) {
-        const text = heroTitle.textContent;
-        heroTitle.textContent = '';
-        let i = 0;
-        
-        const typeWriter = () => {
-            if (i < text.length) {
-                heroTitle.textContent += text.charAt(i);
-                i++;
-                setTimeout(typeWriter, 100);
-            }
-        };
-        
-        setTimeout(typeWriter, 500);
-    }
+    // Initialize hero title animation
+    animateHeroTitle();
 
     // Add scroll progress indicator
     const createScrollProgress = () => {

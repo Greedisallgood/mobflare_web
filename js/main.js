@@ -75,11 +75,18 @@ function initLangSwitcher(){
   const currentBtn = document.getElementById('lang-current');
   const list = document.getElementById('lang-list');
   if(!currentBtn || !list){ return; }
-  let saved = localStorage.getItem('lang') || 'en';
+  
+  let saved = 'en';
+  try {
+      saved = localStorage.getItem('lang') || 'en';
+  } catch (e) {
+      console.log('LocalStorage access denied');
+  }
+
   // Fallback: if Arabic is saved, reset to English
   if(saved === 'ar') {
     saved = 'en';
-    localStorage.setItem('lang', 'en');
+    try { localStorage.setItem('lang', 'en'); } catch(e){}
   }
   currentBtn.textContent = saved === 'en' ? 'English' : saved==='ru' ? 'Русский' : 'עברית';
   applyI18n(saved);
@@ -94,7 +101,9 @@ function initLangSwitcher(){
     const lang = li.getAttribute('data-lang');
     // Prevent selecting Arabic if somehow it appears
     if(lang === 'ar') return;
-    localStorage.setItem('lang', lang);
+    
+    try { localStorage.setItem('lang', lang); } catch(e){}
+    
     currentBtn.textContent = lang === 'en' ? 'English' : lang==='ru' ? 'Русский' : 'עברית';
     list.setAttribute('hidden',''); currentBtn.setAttribute('aria-expanded','false');
     applyI18n(lang);
@@ -142,13 +151,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Header background change on scroll
     const header = document.querySelector('.header');
+    let headerTicking = false;
     window.addEventListener('scroll', function() {
-        if (window.scrollY > 100) {
-            header.style.background = 'rgba(255, 255, 255, 0.98)';
-            header.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.1)';
-        } else {
-            header.style.background = 'rgba(255, 255, 255, 0.95)';
-            header.style.boxShadow = 'none';
+        if (!headerTicking) {
+            window.requestAnimationFrame(function() {
+                if (window.scrollY > 100) {
+                    header.style.background = 'rgba(255, 255, 255, 0.98)';
+                    header.style.boxShadow = '0 2px 20px rgba(0, 0, 0, 0.1)';
+                } else {
+                    header.style.background = 'rgba(255, 255, 255, 0.95)';
+                    header.style.boxShadow = 'none';
+                }
+                headerTicking = false;
+            });
+            headerTicking = true;
         }
     });
 
@@ -174,74 +190,22 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(el);
     });
 
-    // Removed hero visual animations - visual section removed from hero
-
     // Parallax effect for hero section
+    let parallaxTicking = false;
     window.addEventListener('scroll', function() {
-        const scrolled = window.pageYOffset;
-        const hero = document.querySelector('.hero');
-        if (hero) {
-            const rate = scrolled * -0.5;
-            hero.style.transform = `translateY(${rate}px)`;
+        if (!parallaxTicking) {
+            window.requestAnimationFrame(function() {
+                const scrolled = window.pageYOffset;
+                const hero = document.querySelector('.hero');
+                if (hero) {
+                    const rate = scrolled * -0.5;
+                    hero.style.transform = `translateY(${rate}px)`;
+                }
+                parallaxTicking = false;
+            });
+            parallaxTicking = true;
         }
     });
-
-    // Counter animation for metrics
-    const animateCounters = () => {
-        const counters = document.querySelectorAll('.metric-number');
-        counters.forEach(counter => {
-            const target = parseInt(counter.textContent.replace(/[^\d]/g, ''));
-            const increment = target / 100;
-            let current = 0;
-            
-            const updateCounter = () => {
-                if (current < target) {
-                    current += increment;
-                    if (counter.textContent.includes('K+')) {
-                        counter.textContent = Math.ceil(current / 1000) + 'K+';
-                    } else if (counter.textContent.includes('M+')) {
-                        counter.textContent = Math.ceil(current / 1000000) + 'M+';
-                    } else if (counter.textContent.includes('$')) {
-                        counter.textContent = '$' + current.toFixed(2);
-                    } else if (counter.textContent.includes('%')) {
-                        counter.textContent = Math.ceil(current) + '%';
-                    } else {
-                        counter.textContent = Math.ceil(current);
-                    }
-                    requestAnimationFrame(updateCounter);
-                } else {
-                    if (counter.textContent.includes('K+')) {
-                        counter.textContent = target / 1000 + 'K+';
-                    } else if (counter.textContent.includes('M+')) {
-                        counter.textContent = target / 1000000 + 'M+';
-                    } else if (counter.textContent.includes('$')) {
-                        counter.textContent = '$' + target.toFixed(2);
-                    } else if (counter.textContent.includes('%')) {
-                        counter.textContent = target + '%';
-                    } else {
-                        counter.textContent = target;
-                    }
-                }
-            };
-            
-            updateCounter();
-        });
-    };
-
-    // Trigger counter animation when case studies section is visible
-    const caseStudiesSection = document.querySelector('.case-studies');
-    if (caseStudiesSection) {
-        const caseStudiesObserver = new IntersectionObserver(function(entries) {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    animateCounters();
-                    caseStudiesObserver.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.5 });
-        
-        caseStudiesObserver.observe(caseStudiesSection);
-    }
 
     // Add hover effects to service cards
     const serviceCards = document.querySelectorAll('.service-card');
@@ -273,11 +237,18 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         document.body.appendChild(progressBar);
         
+        let progressTicking = false;
         window.addEventListener('scroll', () => {
-            const scrollTop = window.pageYOffset;
-            const docHeight = document.body.scrollHeight - window.innerHeight;
-            const scrollPercent = (scrollTop / docHeight) * 100;
-            progressBar.style.width = scrollPercent + '%';
+            if (!progressTicking) {
+                window.requestAnimationFrame(function() {
+                    const scrollTop = window.pageYOffset;
+                    const docHeight = document.body.scrollHeight - window.innerHeight;
+                    const scrollPercent = (scrollTop / docHeight) * 100;
+                    progressBar.style.width = scrollPercent + '%';
+                    progressTicking = false;
+                });
+                progressTicking = true;
+            }
         });
     };
     

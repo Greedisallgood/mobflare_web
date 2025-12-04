@@ -69,6 +69,11 @@ function applyI18n(lang){
   if(fb && dict.footer?.copyright){ fb.textContent = dict.footer.copyright; }
   // Re-animate hero title after language change
   setTimeout(animateHeroTitle, 100);
+
+  // Track language change in PostHog
+  if (window.posthog) {
+    window.posthog.capture('language_changed', { language: lang });
+  }
 }
 
 function initLangSwitcher(){
@@ -137,6 +142,15 @@ document.addEventListener('DOMContentLoaded', function() {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
             const target = document.querySelector(this.getAttribute('href'));
+            
+            // Track navigation clicks
+            if (window.posthog) {
+                window.posthog.capture('nav_click', { 
+                    destination: this.getAttribute('href'),
+                    text: this.textContent.trim()
+                });
+            }
+
             if (target) {
                 const headerHeight = document.querySelector('.header').offsetHeight;
                 const targetPosition = target.offsetTop - headerHeight;
@@ -237,6 +251,10 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         document.body.appendChild(progressBar);
         
+        // Scroll depth tracking
+        let maxScrollDepth = 0;
+        const scrollDepths = [25, 50, 75, 90];
+        
         let progressTicking = false;
         window.addEventListener('scroll', () => {
             if (!progressTicking) {
@@ -245,12 +263,68 @@ document.addEventListener('DOMContentLoaded', function() {
                     const docHeight = document.body.scrollHeight - window.innerHeight;
                     const scrollPercent = (scrollTop / docHeight) * 100;
                     progressBar.style.width = scrollPercent + '%';
+                    
+                    // Track scroll depth
+                    if (window.posthog) {
+                        const currentDepth = Math.floor(scrollPercent);
+                        if (currentDepth > maxScrollDepth) {
+                            maxScrollDepth = currentDepth;
+                            
+                            // Check if we passed any thresholds
+                            scrollDepths.forEach(depth => {
+                                if (currentDepth >= depth && maxScrollDepth - (currentDepth - depth) < depth) {
+                                    // This is a simplified check, ensuring we don't fire multiple times for the same depth
+                                    // But since maxScrollDepth increases monotonically, we can just check if we've fired for this depth yet.
+                                    // Better approach: use a set of fired depths.
+                                }
+                            });
+                        }
+                    }
+                    
                     progressTicking = false;
                 });
                 progressTicking = true;
             }
         });
+        
+        // Better scroll tracking logic
+        const trackedDepths = new Set();
+        let scrollTrackingTicking = false;
+        
+        window.addEventListener('scroll', () => {
+            if(!scrollTrackingTicking) {
+                window.requestAnimationFrame(() => {
+                    const scrollTop = window.pageYOffset;
+                    const docHeight = document.body.scrollHeight - window.innerHeight;
+                    const scrollPercent = Math.round((scrollTop / docHeight) * 100);
+                    
+                    [25, 50, 75, 100].forEach(depth => {
+                        if (scrollPercent >= depth && !trackedDepths.has(depth)) {
+                            trackedDepths.add(depth);
+                            if (window.posthog) {
+                                window.posthog.capture('scroll_depth', { depth: depth + '%' });
+                            }
+                        }
+                    });
+                    scrollTrackingTicking = false;
+                });
+                scrollTrackingTicking = true;
+            }
+        });
     };
     
     createScrollProgress();
+
+    // Track Button Clicks (Contact, Get Started, etc.)
+    document.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (window.posthog) {
+                window.posthog.capture('button_click', {
+                    text: this.textContent.trim(),
+                    href: this.getAttribute('href'),
+                    class: this.className
+                });
+            }
+        });
+    });
 });
